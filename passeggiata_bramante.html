@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Il Codice Architettonico di Donato Bramante</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* =========================================
+           VARIABILI BRAMANTE (Colori e Font)
+           ========================================= */
+        :root {
+            --bg-body: #F8F9FA;
+            --bg-travertino: #F5F5DC;
+            --bg-travertino-light: #FCFCF5;
+            --text-dark: #2b2b2b;
+            --text-gray: #6b6b6b;
+            --oro-bramante: #DAA520;
+            --oro-hover: #b8860b;
+            
+            --font-titoli: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+            --font-testi: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: var(--font-testi); 
+            background: var(--bg-body);
+            overflow-x: hidden;
+        }
+        
+        /* === NAVIGATION BAR === */
+        #navbar {
+            background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            height: 65px;
+        }
+        
+        #navbar h1 {
+            font-family: var(--font-titoli);
+            font-size: 1.5em;
+            color: var(--oro-bramante);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #nav-buttons button {
+            background: transparent;
+            color: var(--oro-bramante);
+            border: 1px solid var(--oro-bramante);
+            padding: 8px 20px;
+            margin-left: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--font-testi);
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+        
+        #nav-buttons button:hover {
+            background: var(--oro-bramante);
+            color: var(--text-dark);
+            transform: translateY(-2px);
+        }
+        
+        /* === VIEWS === */
+        .view {
+            display: none;
+        }
+        
+        .view.active {
+            display: block;
+        }
+        
+        /* === HOME VIEW (Selezione Itinerario) === */
+        #home-view {
+            padding: 50px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        #home-view h2 {
+            text-align: center;
+            color: var(--text-dark);
+            font-family: var(--font-titoli);
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        #home-view .subtitle {
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 1.2em;
+            font-style: italic;
+            margin-bottom: 50px;
+        }
+        
+        .itinerari-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .itinerario-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #eee;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .itinerario-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(218, 165, 32, 0.2);
+            border-color: var(--oro-bramante);
+        }
+        
+        .card-image {
+            height: 250px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border-bottom: 4px solid var(--oro-bramante);
+        }
+        
+        .card-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--text-dark);
+            color: var(--oro-bramante);
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .card-content {
+            padding: 30px;
+        }
+        
+        .card-content h3 {
+            color: var(--text-dark);
+            font-family: var(--font-titoli);
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        
+        .card-subtitle {
+            color: var(--text-gray);
+            font-size: 1em;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .card-description {
+            color: #555;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+        
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat i {
+            color: var(--oro-bramante);
+            font-size: 1.3em;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            font-family: var(--font-titoli);
+            color: var(--text-dark);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: var(--text-gray);
+            text-transform: uppercase;
+        }
+        
+        .card-button {
+            width: 100%;
+            padding: 15px;
+            background: var(--text-dark);
+            color: var(--oro-bramante);
+            border: 2px solid var(--text-dark);
+            border-radius: 4px;
+            font-size: 1.1em;
+            font-family: var(--font-testi);
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .card-button:hover {
+            background: var(--oro-bramante);
+            color: white;
+            border-color: var(--oro-bramante);
+        }
+        
+        /* === ITINERARY VIEW === */
+        #itinerary-view {
+            display: flex;
+            height: calc(100vh - 65px);
+        }
+        
+        /* Timeline Sidebar */
+        #timeline-sidebar {
+            width: 300px;
+            background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+            color: white;
+            padding: 25px 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #timeline-title {
+            font-family: var(--font-titoli);
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(218, 165, 32, 0.4); /* Oro semitrasparente */
+            color: var(--oro-bramante);
+        }
+        
+        #progress-bar {
+            background: rgba(255,255,255,0.1);
+            height: 6px;
+            border-radius: 3px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+        
+        #progress-fill {
+            background: var(--oro-bramante);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        #timeline-items {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .timeline-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.03);
+        }
+        
+        .timeline-item:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(5px);
+        }
+        
+        .timeline-item.completed {
+            border-left-color: #7f8c8d;
+            opacity: 0.7;
+        }
+        
+        .timeline-item.current {
+            border-left-color: var(--oro-bramante);
+            background: rgba(218, 165, 32, 0.15);
+        }
+        
+        .timeline-item.upcoming {
+            border-left-color: #555;
+            opacity: 0.5;
+        }
+        
+        .timeline-icon {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            color: var(--bg-travertino);
+        }
+        
+        .timeline-time {
+            font-size: 0.9em;
+            color: var(--oro-bramante);
+            font-weight: bold;
+        }
+        
+        .timeline-name {
+            font-size: 1.05em;
+            margin-top: 5px;
+            font-family: var(--font-titoli);
+        }
+        
+        .timeline-duration {
+            font-size: 0.8em;
+            color: #bdc3c7;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+        
+        /* Main Content (Mappa + Dettagli) */
+        #itinerary-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map-container {
+            flex: 1;
+            position: relative;
+            border-bottom: 3px solid var(--oro-bramante);
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Dettagli Tappa */
+        #tappa-details {
+            height: 45%;
+            background: var(--bg-travertino-light);
+            padding: 30px 40px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        #tappa-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        #tappa-numero {
+            font-family: var(--font-titoli);
+            font-size: 3.5em;
+            color: var(--oro-bramante);
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        #tappa-nome {
+            flex: 1;
+            margin: 0 25px;
+        }
+        
+        #tappa-nome h2 {
+            color: var(--text-dark);
+            font-family: var(--font-titoli);
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        #tappa-nome .descrizione-breve {
+            color: var(--text-gray);
+            font-size: 1.05em;
+            line-height: 1.5;
+        }
+        
+        #tappa-orario {
+            text-align: right;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        #tappa-orario .time {
+            font-size: 1.6em;
+            color: var(--text-dark);
+            font-weight: bold;
+            font-family: var(--font-titoli);
+        }
+        
+        #tappa-orario .moment {
+            font-size: 0.9em;
+            color: var(--oro-bramante);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        
+        /* Contenuti Esperienza Culturale */
+        .esperienza-section {
+            margin: 25px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid var(--text-dark);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+        }
+        
+        .esperienza-section h3 {
+            color: var(--text-dark);
+            font-family: var(--font-titoli);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4em;
+        }
+        
+        /* Audio Player */
+        .music-player {
+            background: var(--text-dark);
+            padding: 25px;
+            border-radius: 8px;
+            color: white;
+            margin: 25px 0;
+            border-left: 4px solid var(--oro-bramante);
+        }
+        
+        .music-player h4 {
+            margin-bottom: 15px;
+            font-family: var(--font-titoli);
+            font-size: 1.3em;
+            color: var(--oro-bramante);
+        }
+        
+        .music-player audio {
+            width: 100%;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        /* Nuovi Stili per i Link Streaming */
+        .streaming-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .streaming-links a {
+            text-decoration: none;
+            font-size: 0.95em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.3s;
+        }
+
+        .streaming-links a:hover {
+            opacity: 0.8;
+        }
+
+        .link-spotify {
+            color: #1DB954;
+        }
+
+        .link-youtube {
+            color: #FF0000;
+        }
+        
+        .music-description {
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #ddd;
+            margin-top: 5px;
+        }
+        
+        /* Citazione Letteraria */
+        .citazione-box {
+            background: var(--bg-travertino);
+            border-left: 4px solid var(--oro-bramante);
+            padding: 25px;
+            border-radius: 0 8px 8px 0;
+            margin: 25px 0;
+        }
+        
+        .citazione-text {
+            font-family: var(--font-titoli);
+            font-size: 1.2em;
+            font-style: italic;
+            line-height: 1.7;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+        }
+        
+        .citazione-author {
+            text-align: right;
+            color: var(--text-gray);
+            font-size: 0.95em;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        
+        /* Atmosfera */
+        .atmosfera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .atmosfera-item {
+            background: var(--bg-travertino-light);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+        
+        .atmosfera-item .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: var(--oro-bramante);
+        }
+        
+        .atmosfera-item .label {
+            font-size: 0.85em;
+            color: var(--text-gray);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .atmosfera-item .value {
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        
+        /* Navigation Buttons Bottom */
+        #tappa-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            gap: 20px;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            font-family: var(--font-testi);
+        }
+        
+        .nav-btn.prev {
+            background: white;
+            color: var(--text-dark);
+            border: 1px solid #ccc;
+        }
+        
+        .nav-btn.prev:hover {
+            background: #eee;
+        }
+        
+        .nav-btn.next {
+            background: var(--text-dark);
+            color: var(--oro-bramante);
+        }
+        
+        .nav-btn.next:hover {
+            background: var(--oro-hover);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Scrollbar Personalizzata */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--oro-bramante);
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #itinerary-view { flex-direction: column; }
+            #timeline-sidebar { width: 100%; height: 200px; overflow-x: auto; overflow-y: hidden; }
+            .itinerari-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar">
+        <h1><i class="fa-solid fa-compass-drafting"></i> Passeggiate Romane</h1>
+        <div id="nav-buttons">
+            <button onclick="showView('home')"><i class="fa-solid fa-house"></i> Home</button>
+            <button id="back-to-itinerary-btn" onclick="showView('itinerary')" style="display:none;"><i class="fa-solid fa-map"></i> Torna all'Itinerario</button>
+        </div>
+    </div>
+    
+    <div id="home-view" class="view active">
+        <h2>Itinerari Tematici</h2>
+        <p class="subtitle">Il rigore architettonico incontra l'intelligenza artificiale</p>
+        
+        <div id="itinerari-container" class="itinerari-grid">
+            </div>
+    </div>
+    
+    <div id="itinerary-view" class="view">
+        
+        <div id="timeline-sidebar">
+            <div id="timeline-title">Timeline Itinerario</div>
+            <div id="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+            <div id="timeline-items">
+                </div>
+        </div>
+        
+        <div id="itinerary-content">
+            
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+            
+            <div id="tappa-details">
+                <div id="tappa-header">
+                    <div id="tappa-numero"></div>
+                    <div id="tappa-nome">
+                        <h2></h2>
+                        <p class="descrizione-breve"></p>
+                    </div>
+                    <div id="tappa-orario">
+                        <div class="time"></div>
+                        <div class="moment"></div>
+                    </div>
+                </div>
+                
+                <div id="tappa-content">
+                    </div>
+                
+                <div id="tappa-navigation">
+                    <button class="nav-btn prev" onclick="previousTappa()"><i class="fa-solid fa-arrow-left"></i> Precedente</button>
+                    <button class="nav-btn next" onclick="nextTappa()">Successiva <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // ========================================
+        // VARIABILI GLOBALI
+        // ========================================
+        let itinerariData = null;
+        let currentItinerario = null;
+        let currentTappaIndex = 0;
+        let map = null;
+        let markers = [];
+        let routeLine = null;
+        
+        // Icone per i momenti della giornata (FontAwesome)
+        const momentIcons = {
+            'alba': '<i class="fa-solid fa-sun"></i>',
+            'mattino': '<i class="fa-solid fa-cloud-sun"></i>',
+            'mezzogiorno': '<i class="fa-solid fa-sun"></i>',
+            'meriggio': '<i class="fa-solid fa-sun"></i>',
+            'pomeriggio': '<i class="fa-solid fa-cloud-sun"></i>',
+            'tramonto': '<i class="fa-solid fa-moon"></i>',
+            'sera': '<i class="fa-solid fa-moon"></i>'
+        };
+        
+        // ========================================
+        // INIZIALIZZAZIONE
+        // ========================================
+        async function init() {
+            console.log('🚀 Inizializzazione Passeggiate Romane (Bramante Version)...');
+            await loadItinerariData();
+            renderItinerariCards();
+        }
+        
+        // ========================================
+        // CARICAMENTO DATI
+        // ========================================
+        async function loadItinerariData() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('File data.json non trovato o bloccato dai CORS.');
+                
+                const data = await response.json();
+                itinerariData = data.itinerari;
+                console.log(`✅ Caricati ${itinerariData.length} itinerari dal JSON`);
+            } catch (error) {
+                console.error('❌ Errore fetch JSON. Uso il fallback di Bramante:', error);
+                // Fallback: usa dati embedded relativi a Bramante (anziché Respighi)
+                itinerariData = getEmbeddedItinerari();
+            }
+        }
+        
+        // Fallback di Sicurezza (Bramante)
+        function getEmbeddedItinerari() {
+            return [{
+                id: "bramante_codice",
+                nome: "Il codice architettonico di Donato Bramante",
+                sottotitolo: "Un viaggio immersivo tra geometria, luce e ambizione papale",
+                tema: "Architettura",
+                categoria: "Arte e Storia",
+                durata_totale_ore: 8,
+                distanza_totale_km: 3.8,
+                immagine_copertina: "https://michelangelobuonarrotietornato.com/wp-content/uploads/2021/01/cq5dam.thumbnail.cropped.1000.563-1-2.jpeg",
+                descrizione: "Dall'alba al Gianicolo al tramonto in Vaticano, questo itinerario decodifica il linguaggio geometrico di Bramante attraverso quattro capolavori che hanno ridefinito il volto di Roma.",
+                tappe: [
+                    {
+                        numero: 1,
+                        nome: "Tempietto di San Pietro in Montorio",
+                        coordinate: [41.8881, 12.4665],
+                        orario_consigliato: "06:30",
+                        momento_giornata: "alba",
+                        durata_visita_min: 45,
+                        descrizione_breve: "Manifesto del Rinascimento romano, il tholos di Bramante celebra la perfezione del cerchio nel luogo del martirio di Pietro."
+                    },
+                    {
+                        numero: 2,
+                        nome: "Via Giulia",
+                        coordinate: [41.8965, 12.4688],
+                        orario_consigliato: "10:30",
+                        momento_giornata: "mattino",
+                        durata_visita_min: 60,
+                        descrizione_breve: "Il primo boulevard rettilineo moderno, progettato per sventrare il caos medievale con la logica prospettica."
+                    }
+                ]
+            }];
+        }
+        
+        // ========================================
+        // RENDERING HOME
+        // ========================================
+        function renderItinerariCards() {
+            const container = document.getElementById('itinerari-container');
+            container.innerHTML = '';
+            
+            itinerariData.forEach(itinerario => {
+                const card = document.createElement('div');
+                card.className = 'itinerario-card';
+                card.onclick = () => startItinerario(itinerario.id);
+                
+                card.innerHTML = `
+                    <div class="card-image" style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.6)), url('${itinerario.immagine_copertina || 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=800&auto=format&fit=crop'}')">                        
+                        <div class="card-badge">${itinerario.categoria}</div>
+                    </div>
+                    <div class="card-content">
+                        <h3>${itinerario.nome}</h3>
+                        <p class="card-subtitle">${itinerario.sottotitolo || ''}</p>
+                        <p class="card-description">${itinerario.descrizione}</p>
+                        
+                        <div class="card-stats">
+                            <div class="stat">
+                                <i class="fa-regular fa-clock"></i>
+                                <div class="stat-value">${itinerario.durata_totale_ore}h</div>
+                                <div class="stat-label">Durata</div>
+                            </div>
+                            <div class="stat">
+                                <i class="fa-solid fa-map-pin"></i>
+                                <div class="stat-value">${itinerario.tappe.length}</div>
+                                <div class="stat-label">Tappe</div>
+                            </div>
+                            <div class="stat">
+                                <i class="fa-solid fa-route"></i>
+                                <div class="stat-value">${itinerario.distanza_totale_km}km</div>
+                                <div class="stat-label">Distanza</div>
+                            </div>
+                        </div>
+                        
+                        <button class="card-button">Inizia l'Esplorazione</button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // ========================================
+        // START ITINERARIO
+        // ========================================
+        function startItinerario(itinerarioId) {
+            currentItinerario = itinerariData.find(it => it.id === itinerarioId);
+            if (!currentItinerario) return;
+            
+            currentTappaIndex = 0;
+            
+            showView('itinerary');
+            initMap();
+            renderTimeline();
+            loadTappa(0);
+            
+            // Fix resize mappa per Leaflet in SPA
+            setTimeout(() => { map.invalidateSize(); }, 200);
+        }
+        
+        // ========================================
+        // GESTIONE VIEWS
+        // ========================================
+        function showView(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(`${viewName}-view`).classList.add('active');
+            
+            const backBtn = document.getElementById('back-to-itinerary-btn');
+            backBtn.style.display = viewName === 'itinerary' ? 'inline-block' : 'none';
+        }
+        
+        // ========================================
+        // MAPPA LEAFLET
+        // ========================================
+        function initMap() {
+            if (map) map.remove();
+            
+            map = L.map('map').setView([41.9028, 12.4964], 13);
+            
+            // Mappa stile architettonico (Light)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap © CARTO'
+            }).addTo(map);
+            
+            drawRoute();
+            addMarkers();
+        }
+        
+        function drawRoute() {
+            const coordinates = currentItinerario.tappe.map(t => t.coordinate);
+            if (routeLine) map.removeLayer(routeLine);
+            
+            routeLine = L.polyline(coordinates, {
+                color: '#DAA520', // Oro Bramante
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '8, 8',
+                lineJoin: 'round'
+            }).addTo(map);
+            
+            map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+        }
+        
+        function addMarkers() {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            
+            currentItinerario.tappe.forEach((tappa, index) => {
+                const marker = L.marker(tappa.coordinate).addTo(map);
+                
+                marker.bindPopup(`<strong style="font-family:'Palatino Linotype',serif; font-size:1.1em;">${tappa.nome}</strong><br><span style="color:#DAA520;">${tappa.orario_consigliato}</span>`);
+                marker.on('click', () => loadTappa(index));
+                
+                markers.push(marker);
+            });
+        }
+        
+        // ========================================
+        // TIMELINE
+        // ========================================
+        function renderTimeline() {
+            const container = document.getElementById('timeline-items');
+            container.innerHTML = '';
+            
+            currentItinerario.tappe.forEach((tappa, index) => {
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                
+                if (index < currentTappaIndex) item.classList.add('completed');
+                else if (index === currentTappaIndex) item.classList.add('current');
+                else item.classList.add('upcoming');
+                
+                item.onclick = () => loadTappa(index);
+                
+                const iconHtml = momentIcons[tappa.momento_giornata] || '<i class="fa-solid fa-location-dot"></i>';
+                
+                item.innerHTML = `
+                    <div class="timeline-icon">${iconHtml}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-time">${tappa.orario_consigliato}</div>
+                        <div class="timeline-name">${tappa.nome}</div>
+                        <div class="timeline-duration"><i class="fa-regular fa-clock"></i> Visita: ${tappa.durata_visita_min} min</div>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+            
+            updateProgress();
+        }
+        
+        function updateProgress() {
+            const progress = ((currentTappaIndex + 1) / currentItinerario.tappe.length) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+        }
+        
+        // ========================================
+        // CARICA DETTAGLI TAPPA
+        // ========================================
+        function loadTappa(index) {
+            currentTappaIndex = index;
+            const tappa = currentItinerario.tappe[index];
+            
+            // Header
+            document.getElementById('tappa-numero').textContent = `${tappa.numero}`;
+            document.querySelector('#tappa-nome h2').textContent = tappa.nome;
+            document.querySelector('#tappa-nome .descrizione-breve').textContent = tappa.descrizione_breve || '';
+            document.querySelector('#tappa-orario .time').textContent = tappa.orario_consigliato;
+            document.querySelector('#tappa-orario .moment').textContent = tappa.momento_giornata;
+            
+            // Content
+            renderTappaContent(tappa);
+            
+            // Timeline
+            renderTimeline();
+            
+            // Mappa: centra
+            map.setView(tappa.coordinate, 16, { animate: true });
+            markers[index].openPopup();
+            
+            // Buttons navigation
+            document.querySelector('.nav-btn.prev').disabled = index === 0;
+            document.querySelector('.nav-btn.next').disabled = index === currentItinerario.tappe.length - 1;
+        }
+        
+        // ========================================
+        // RENDER DEI CONTENUTI SPECIFICI
+        // ========================================
+        function renderTappaContent(tappa) {
+            const container = document.getElementById('tappa-content');
+            container.innerHTML = '';
+            
+            // Storia e Curiosità
+            if (tappa.storia || tappa.curiosita) {
+                const storiaSec = document.createElement('div');
+                storiaSec.className = 'esperienza-section';
+                storiaSec.innerHTML = `
+                    <h3><i class="fa-solid fa-book-open"></i> Storia e Architettura</h3>
+                    ${tappa.storia ? `<p style="margin-bottom:10px;"><strong>Contesto Storico:</strong> ${tappa.storia}</p>` : ''}
+                    ${tappa.curiosita ? `<p><strong>Curiosità Architettonica:</strong> ${tappa.curiosita}</p>` : ''}
+                `;
+                container.appendChild(storiaSec);
+            }
+            
+            // Esperienza Culturale (Musica, Letteratura, Atmosfera)
+            if (tappa.esperienza_culturale) {
+                const exp = tappa.esperienza_culturale;
+                
+                // Musica
+                if (exp.musica) {
+                    const musicDiv = document.createElement('div');
+                    musicDiv.className = 'music-player';
+                    
+                    // Creazione dinamica dei link di streaming se presenti nel JSON
+                    let streamingLinks = '';
+                    if (exp.musica.spotify_url || exp.musica.youtube_url) {
+                        streamingLinks = '<div class="streaming-links">';
+                        if (exp.musica.spotify_url) {
+                            streamingLinks += `<a href="${exp.musica.spotify_url}" target="_blank" class="link-spotify"><i class="fa-brands fa-spotify"></i> Ascolta su Spotify</a>`;
+                        }
+                        if (exp.musica.youtube_url) {
+                            streamingLinks += `<a href="${exp.musica.youtube_url}" target="_blank" class="link-youtube"><i class="fa-brands fa-youtube"></i> Ascolta su YouTube Music</a>`;
+                        }
+                        streamingLinks += '</div>';
+                    }
+
+                    musicDiv.innerHTML = `
+                        <h4><i class="fa-solid fa-music"></i> ${exp.musica.movimento || 'Brano Musicale'}</h4>
+                        <audio controls preload="metadata">
+                            <source src="" type="audio/mpeg">
+                            Il tuo browser non supporta l'audio.
+                        </audio>
+                        ${streamingLinks}
+                        <div class="music-description">
+                            ${exp.musica.descrizione_musicale || ''}
+                        </div>
+                    `;
+                    container.appendChild(musicDiv);
+                }
+                
+                // Letteratura
+                if (exp.letteratura) {
+                    const litDiv = document.createElement('div');
+                    litDiv.className = 'citazione-box';
+                    litDiv.innerHTML = `
+                        <div class="citazione-text">"${exp.letteratura.citazione}"</div>
+                        <div class="citazione-author">${exp.letteratura.autore}</div>
+                    `;
+                    container.appendChild(litDiv);
+                }
+                
+                // Atmosfera (Metadati per Prompt AI)
+                if (exp.atmosfera) {
+                    const atmDiv = document.createElement('div');
+                    atmDiv.className = 'esperienza-section';
+                    atmDiv.innerHTML = `
+                        <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Prompt Engine per AI</h3>
+                        <p style="margin-bottom:15px; color:#666; font-size:0.9em;">Parametri per l'intelligenza artificiale generativa</p>
+                        <div class="atmosfera-grid">
+                            <div class="atmosfera-item">
+                                <div class="icon"><i class="fa-solid fa-camera"></i></div>
+                                <div class="label">Luce</div>
+                                <div class="value">${exp.atmosfera.luce || 'N/A'}</div>
+                            </div>
+                            <div class="atmosfera-item">
+                                <div class="icon"><i class="fa-solid fa-bullseye"></i></div>
+                                <div class="label">Emozione Target</div>
+                                <div class="value">${exp.atmosfera.emozione_target || 'N/A'}</div>
+                            </div>
+                            <div class="atmosfera-item">
+                                <div class="icon"><i class="fa-solid fa-users"></i></div>
+                                <div class="label">Affollamento</div>
+                                <div class="value">${exp.atmosfera.affollamento || 'N/A'}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(atmDiv);
+                }
+            }
+        }
+        
+        // ========================================
+        // NAVIGAZIONE BOTTONI
+        // ========================================
+        function previousTappa() {
+            if (currentTappaIndex > 0) {
+                loadTappa(currentTappaIndex - 1);
+            }
+        }
+        
+        function nextTappa() {
+            if (currentTappaIndex < currentItinerario.tappe.length - 1) {
+                loadTappa(currentTappaIndex + 1);
+            }
+        }
+        
+        // ========================================
+        // AVVIO APPLICAZIONE
+        // ========================================
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
